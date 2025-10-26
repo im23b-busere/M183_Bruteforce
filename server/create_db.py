@@ -59,7 +59,7 @@ def main(argv=None):
         now = int(time.time())
         demo_users = [
             ("alice", "Password123"),
-            ("bob", "12345678"),
+            ("bob", "123"),
         ]
 
         cur = conn.cursor()
