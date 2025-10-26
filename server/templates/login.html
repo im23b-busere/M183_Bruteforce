@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Login</title>
+  </head>
+  <body>
+    <h1>Login</h1>
+    <form id="loginForm" method="post" action="/login">
+      <label>
+        Username: <input type="text" name="username" />
+      </label>
+      <br />
+      <label>
+        Password: <input type="password" name="password" />
+      </label>
+      <br />
+      <button type="submit">Login</button>
+    </form>
+
+    <script>
+      // Submit as JSON via fetch but form fallback works too
+      document.getElementById('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const payload = { username: form.username.value, password: form.password.value };
+
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        alert(JSON.stringify(json));
+      });
+    </script>
+  </body>
+</html>

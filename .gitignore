@@ -1,0 +1,10 @@
+# Ignore local SQLite DB and Python artifacts
+/db/users.sqlite
+__pycache__/
+*.py[cod]
+env/
+venv/
+.venv/
+.env
+*.log
+/.vscode/
