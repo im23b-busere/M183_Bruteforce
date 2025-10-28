@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from defense.delay import apply_progressive_delay
 from defense.counter import is_account_locked, increment_failed_attempts, reset_failed_attempts
 from defense.logging import log_auth_attempt
-from defense.captcha import issue_challenge, validate_captcha, clear_challenge
+
 
 app = Flask(__name__, template_folder="templates")
 
@@ -42,111 +42,71 @@ def get_db_connection():
     return conn
 
 
-def _issue_new_captcha_payload():
-    challenge = issue_challenge(session)
-    return {"captcha_question": challenge.question, "captcha_token": challenge.token}
+
 
 
 @app.route("/", methods=["GET"])
 def index():
-    payload = _issue_new_captcha_payload()
-    return render_template(
-        "login.html",
-        captcha_question=payload["captcha_question"],
-        captcha_token=payload["captcha_token"],
-    )
+    return render_template("login.html")
 
+
+
+import requests
+RECAPTCHA_SECRET = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 
 @app.route("/login", methods=["POST"])
 def login():
-    # get real client IP (handle proxies)
     client_ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
-    
-    # Accept JSON or form-encoded body
     data = request.get_json(silent=True)
     if data is None:
         data = request.form
 
     username = data.get("username")
     password = data.get("password")
-    captcha_response = data.get("captcha_response") or data.get("captcha")
-    captcha_token = data.get("captcha_token")
+    recaptcha_response = data.get("g-recaptcha-response")
 
-    if not validate_captcha(session, captcha_response, captcha_token):
-        log_auth_attempt(username or "unknown", client_ip, False, "captcha failed")
-        payload = _issue_new_captcha_payload()
-        response = {
-            "success": False,
-            "error": "Captcha validation failed",
-            **payload,
-        }
-        return jsonify(response), 400
+    if not recaptcha_response:
+        return jsonify({"success": False, "error": "reCAPTCHA required"}), 400
+
+    # Verify with Google
+    try:
+        verify_resp = requests.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data={
+                "secret": RECAPTCHA_SECRET,
+                "response": recaptcha_response,
+                "remoteip": client_ip,
+            },
+            timeout=5,
+        )
+        result = verify_resp.json()
+        if not result.get("success"):
+            return jsonify({"success": False, "error": "reCAPTCHA failed"}), 400
+    except Exception:
+        return jsonify({"success": False, "error": "reCAPTCHA check error"}), 400
 
     if not username or not password:
-        log_auth_attempt(username or "unknown", client_ip, False, "missing credentials")
-        payload = _issue_new_captcha_payload()
-        response = {
-            "success": False,
-            "error": "Invalid credentials",
-            **payload,
-        }
-        return jsonify(response), 400
-
-    # Defense 3.2: check if account is locked
-    locked, remaining = is_account_locked(username)
-    if locked:
-        log_auth_attempt(username, client_ip, False, f"account locked ({remaining}s remaining)")
-        payload = _issue_new_captcha_payload()
-        # generic error message to not leak account status
-        response = {
-            "success": False,
-            "error": "Invalid credentials",
-            **payload,
-        }
-        return jsonify(response), 401
+        return jsonify({"success": False, "error": "Invalid credentials"}), 400
 
     # Defense 3.1: apply progressive delay (exponential backoff per user)
     apply_progressive_delay(username)
 
     conn = get_db_connection()
     try:
-        # CRITICAL: use bcrypt hashed passwords, NOT plaintext
         cur = conn.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
         row = cur.fetchone()
-        
-        # constant-time comparison to prevent timing attacks
         if row and row["password_hash"] is not None:
             try:
-                # bcrypt.checkpw is timing-attack resistant
                 password_bytes = password.encode('utf-8')
                 hash_bytes = row["password_hash"].encode('utf-8') if isinstance(row["password_hash"], str) else row["password_hash"]
-                
                 if bcrypt.checkpw(password_bytes, hash_bytes):
-                    # Success - Defense 3.2: reset counter, Defense 3.3: log
-                    reset_failed_attempts(username)
-                    log_auth_attempt(username, client_ip, True, "login successful")
-                    
                     session.permanent = True
                     session["username"] = username
                     session["logged_in"] = True
-                    
-                    clear_challenge(session)
                     return jsonify({"success": True, "message": "login successful"})
             except (ValueError, AttributeError):
-                # invalid hash format
                 pass
-        
-        # Failed - Defense 3.2: increment counter, Defense 3.3: log
-        increment_failed_attempts(username)
-        log_auth_attempt(username, client_ip, False, "invalid credentials")
-        payload = _issue_new_captcha_payload()
-        # generic error message (don't reveal if user exists)
-        response = {
-            "success": False,
-            "error": "Invalid credentials",
-            **payload,
-        }
-        return jsonify(response), 401
+        return jsonify({"success": False, "error": "Invalid credentials"}), 401
     finally:
         conn.close()
 

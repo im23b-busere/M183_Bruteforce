@@ -16,17 +16,12 @@
         Password: <input type="password" name="password" />
       </label>
       <br />
-      <div>
-        <p id="captchaQuestion">{{ captcha_question }}</p>
-        <input type="hidden" name="captcha_token" value="{{ captcha_token }}" />
-        <label>
-          Antwort: <input type="text" name="captcha_response" autocomplete="off" />
-        </label>
-      </div>
+      <div class="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
       <br />
       <button type="submit">Login</button>
     </form>
 
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <script>
       // Submit as JSON via fetch but form fallback works too
       document.getElementById('loginForm').addEventListener('submit', async function (e) {
@@ -35,8 +30,7 @@
         const payload = {
           username: form.username.value,
           password: form.password.value,
-          captcha_response: form.captcha_response.value,
-          captcha_token: form.captcha_token.value,
+          'g-recaptcha-response': form.querySelector('[name="g-recaptcha-response"]').value
         };
 
         const res = await fetch('/login', {
@@ -46,12 +40,6 @@
         });
         const json = await res.json();
         alert(JSON.stringify(json));
-
-        if (json.captcha_question && json.captcha_token) {
-          document.getElementById('captchaQuestion').textContent = json.captcha_question;
-          form.captcha_token.value = json.captcha_token;
-          form.captcha_response.value = '';
-        }
       });
     </script>
   </body>
