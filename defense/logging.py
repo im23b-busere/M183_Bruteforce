@@ -1,5 +1,15 @@
-# Defense 3.3: Logging with alerts
-# This module logs authentication attempts to database and file
+"""
+================================================================================
+File:        logging.py
+Description: Authentication logging defense mechanism (3.3)
+             Logs all authentication attempts to database and file for monitoring
+Parameters:  Logs to:
+             - Database: auth_attempts table in db/users.sqlite
+             - File: server_secure.log
+Author:      Raiyan Mahfuz
+Date:        2025-10-28
+================================================================================
+"""
 
 import time
 import sqlite3

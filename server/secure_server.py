@@ -1,3 +1,16 @@
+"""
+================================================================================
+File:        secure_server.py
+Description: Secured Flask server with all defense mechanisms active
+             Implements delays, account lockout, CAPTCHA, and logging
+Parameters:  Environment variables:
+             - DEFENSE_MODE: "linear" or "progressive" (default: progressive)
+             Runs on http://127.0.0.1:5001 by default
+Author:      Raiyan Mahfuz
+Date:        2025-10-28
+================================================================================
+"""
+
 from flask import Flask, render_template, request, jsonify, session
 import sqlite3
 from pathlib import Path
@@ -11,13 +24,16 @@ from datetime import timedelta
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # import defense mechanisms
-from defense.delay import apply_progressive_delay
+from defense.delay import apply_progressive_delay, apply_linear_delay
 from defense.counter import is_account_locked, increment_failed_attempts, reset_failed_attempts
 from defense.logging import log_auth_attempt
 from defense.captcha import verify_recaptcha
 
 
 app = Flask(__name__, template_folder="templates")
+
+# Configuration: Choose defense mode
+DEFENSE_MODE = os.environ.get("DEFENSE_MODE", "progressive")  # "linear" or "progressive"
 
 # secure session configuration
 SESSION_KEY_FILE = Path(__file__).resolve().parent / ".session_key"
@@ -78,8 +94,11 @@ def login():
         log_auth_attempt(username, client_ip, False, f"Account locked ({remaining}s remaining)")
         return jsonify({"success": False, "error": f"Account locked. Try again in {remaining} seconds"}), 403
 
-    # Defense 3.1: apply progressive delay (exponential backoff per user)
-    apply_progressive_delay(username)
+    # Defense 3.1: apply delay based on configuration
+    if DEFENSE_MODE == "linear":
+        apply_linear_delay()
+    else:
+        apply_progressive_delay(username)
 
     conn = get_db_connection()
     try:
@@ -135,12 +154,14 @@ if __name__ == "__main__":
     print("=" * 70)
     print("SECURE SERVER - Defense Mechanisms Active")
     print("=" * 70)
-    print("  [3.1] Progressive Delay: Exponential backoff per failed attempt")
-    print("  [3.2] Counter-Limit: 5 failed attempts → 5min account lockout")
-    print("  [3.2] reCAPTCHA: User interaction challenge required")
-    print("  [3.3] Logging: All auth attempts logged to DB + file")
+    delay_mode = "Linear (1s fixed)" if DEFENSE_MODE == "linear" else "Progressive (exponential backoff)"
+    print(f"  [3.1] Delay Mode: {delay_mode}")
+    print(f"  [3.2] Counter-Limit: 5 failed attempts → 5min account lockout")
+    print(f"  [3.2] reCAPTCHA: User interaction challenge required")
+    print(f"  [3.3] Logging: All auth attempts logged to DB + file")
     print("=" * 70)
     print(f"Server starting on http://127.0.0.1:5001")
+    print(f"To change delay mode, set DEFENSE_MODE=linear or DEFENSE_MODE=progressive")
     print("=" * 70)
     print()
     app.run(debug=True, host="127.0.0.1", port=5001)

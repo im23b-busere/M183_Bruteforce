@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Create SQLite DB, apply schema and insert demo accounts.
+"""
+================================================================================
+File:        create_db.py
+Description: Database initialization script for M183 BruteForce project
+             Creates SQLite database with schema and demo user accounts
+Parameters:  --mode <simple|complex>, --db <path>
+Author:      Cadima Lusiola
+Date:        2025-10-28
+================================================================================
 """
 
 import argparse

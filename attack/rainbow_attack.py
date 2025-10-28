@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Rainbow table attack demo.
-
-This script demonstrates a rainbow table attack by:
-1. Reading users from db/users.sqlite
-2. Computing SHA1 hash of each user's password_plain field
-3. Looking up the hash in attack/rainbow_table.json
-4. Printing any matches found
-
+================================================================================
+File:        rainbow_attack.py
+Description: Rainbow table attack demonstration (serial version)
+             Looks up password hashes in pre-computed rainbow table
+Parameters:  --db <database_path>, --table <rainbow_table.json>
+Author:      Erik Buser
+Date:        2025-10-28
+================================================================================
 """
 
 import argparse

@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """
-Simple monolithic brute-force tool.
-
-Generates password candidates via itertools.product and POSTs JSON {username,password}
-to the target URL. Treats HTTP 200 as success. Retries transient errors.
+================================================================================
+File:        mono_attack.py
+Description: Monolithic (single-alphabet) brute-force attack tool
+             Generates password candidates from ONE character set at a time
+             (digits, lowercase, uppercase, symbols, or custom string)
+Parameters:  --target <URL>, --user <username>, --alphabet <type>,
+             --custom <string>, --max-len <int>, --delay <float>
+Author:      Erik Buser
+Date:        2025-10-28
+================================================================================
 """
 
 import argparse
@@ -15,12 +21,23 @@ import string
 
 
 def build_alphabet(kind, custom=None):
+    """Build alphabet based on the selected kind.
+    
+    Args:
+        kind: One of 'digits', 'lower', 'upper', 'symbols', 'custom'
+        custom: Custom alphabet string (required if kind='custom')
+    
+    Returns:
+        str: The alphabet string to use for password generation
+    """
     if kind == "digits":
         return "0123456789"
     if kind == "lower":
         return string.ascii_lowercase
     if kind == "upper":
         return string.ascii_uppercase
+    if kind == "symbols":
+        return "!@#$%^&*()_+-=[]{}|;:',.<>?/~`"
     if kind == "custom":
         if not custom:
             raise ValueError("--alphabet custom requires --custom value")
@@ -52,7 +69,7 @@ def main():
     parser.add_argument("--user", required=True, help="Username to test")
     parser.add_argument(
         "--alphabet",
-        choices=("digits", "lower", "upper", "custom"),
+        choices=("digits", "lower", "upper", "symbols", "custom"),
         default="digits",
         help="Alphabet to use for password generation",
     )

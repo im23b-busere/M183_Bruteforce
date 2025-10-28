@@ -1,5 +1,15 @@
-# Defense 3.2: CAPTCHA (User Interaction Challenge)
-# This module implements reCAPTCHA verification to prevent automated attacks
+"""
+================================================================================
+File:        captcha.py
+Description: CAPTCHA user interaction challenge defense (3.2)
+             Implements reCAPTCHA v2 verification to prevent automated attacks
+Parameters:  Configuration via module constants:
+             - RECAPTCHA_SITE_KEY: Public key for frontend
+             - RECAPTCHA_SECRET: Private key for backend verification
+Author:      Cadima Lusiola
+Date:        2025-10-28
+================================================================================
+"""
 
 import requests
 

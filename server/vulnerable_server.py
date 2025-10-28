@@ -1,3 +1,14 @@
+"""
+================================================================================
+File:        vulnerable_server.py
+Description: Intentionally vulnerable Flask server for testing attacks
+             No defense mechanisms - for demonstration purposes only
+Parameters:  Runs on http://127.0.0.1:5000 by default
+Author:      Erik Buser
+Date:        2025-10-28
+================================================================================
+"""
+
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 from pathlib import Path

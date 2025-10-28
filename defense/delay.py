@@ -1,5 +1,16 @@
-# Defense 3.1: Linear and Progressive Delay
-# These functions slow down brute-force attacks by introducing delays
+"""
+================================================================================
+File:        delay.py
+Description: Linear and progressive delay defense mechanisms (3.1)
+             Implements time-based delays to slow down brute-force attacks
+Parameters:  Configuration via module constants:
+             - LINEAR_DELAY_SECONDS: Fixed delay per attempt
+             - PROGRESSIVE_DELAY_BASE: Base time for exponential backoff
+             - PROGRESSIVE_DELAY_MULTIPLIER: Multiplier for each failed attempt
+Author:      Raiyan Mahfuz
+Date:        2025-10-28
+================================================================================
+"""
 
 import time
 import sqlite3

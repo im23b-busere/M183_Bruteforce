@@ -1,5 +1,15 @@
-# Defense 3.2: Counter-Limit (Account Lockout)
-# This module tracks failed login attempts and locks accounts after a threshold
+"""
+================================================================================
+File:        counter.py
+Description: Counter-limit defense mechanism with account lockout (3.2)
+             Tracks failed login attempts and locks accounts after threshold
+Parameters:  Configuration via module constants:
+             - MAX_FAILED_ATTEMPTS: Number of attempts before lockout
+             - LOCKOUT_DURATION_SECONDS: Duration of account lock
+Author:      Cadima Lusiola
+Date:        2025-10-28
+================================================================================
+"""
 
 import time
 import sqlite3

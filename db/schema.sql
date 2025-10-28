@@ -1,3 +1,12 @@
+-- ============================================================================
+-- File:        schema.sql
+-- Description: Database schema for M183 BruteForce project
+--              Defines users table with authentication tracking and
+--              auth_attempts table for comprehensive logging
+-- Author:      Cadima Lusiola
+-- Date:        2025-10-28
+-- ============================================================================
+
 PRAGMA foreign_keys = ON;
 
 -- Users table

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Parallel brute-force attack with multi-processing.
-
-Distributes workload across multiple worker processes. Each worker tests candidates
-where (candidate_index % num_workers == worker_id).
-
-Supports three modes:
-  - mono: Monolithic alphabet (digits/lower/upper/custom)
-  - poly: Polymorphic (combinable --digits --lower --upper --symbols)
-  - dict: Dictionary attack with mutations
-
+================================================================================
+File:        parallel_attack.py
+Description: Parallel brute-force attack with multi-processing
+             Distributes password candidates across multiple worker processes
+Parameters:  --mode <mono|poly|dict>, --target <URL>, --user <username>,
+             --workers <int>, plus mode-specific parameters
+Author:      Erik Buser
+Date:        2025-10-28
+================================================================================
 """
 
 import argparse
