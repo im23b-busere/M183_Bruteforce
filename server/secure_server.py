@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from defense.delay import apply_progressive_delay
 from defense.counter import is_account_locked, increment_failed_attempts, reset_failed_attempts
 from defense.logging import log_auth_attempt
+from defense.captcha import issue_challenge, validate_captcha, clear_challenge
 
 app = Flask(__name__, template_folder="templates")
 
@@ -41,9 +42,19 @@ def get_db_connection():
     return conn
 
 
+def _issue_new_captcha_payload():
+    challenge = issue_challenge(session)
+    return {"captcha_question": challenge.question, "captcha_token": challenge.token}
+
+
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("login.html")
+    payload = _issue_new_captcha_payload()
+    return render_template(
+        "login.html",
+        captcha_question=payload["captcha_question"],
+        captcha_token=payload["captcha_token"],
+    )
 
 
 @app.route("/login", methods=["POST"])
@@ -58,17 +69,41 @@ def login():
 
     username = data.get("username")
     password = data.get("password")
+    captcha_response = data.get("captcha_response") or data.get("captcha")
+    captcha_token = data.get("captcha_token")
+
+    if not validate_captcha(session, captcha_response, captcha_token):
+        log_auth_attempt(username or "unknown", client_ip, False, "captcha failed")
+        payload = _issue_new_captcha_payload()
+        response = {
+            "success": False,
+            "error": "Captcha validation failed",
+            **payload,
+        }
+        return jsonify(response), 400
 
     if not username or not password:
         log_auth_attempt(username or "unknown", client_ip, False, "missing credentials")
-        return jsonify({"success": False, "error": "Invalid credentials"}), 400
+        payload = _issue_new_captcha_payload()
+        response = {
+            "success": False,
+            "error": "Invalid credentials",
+            **payload,
+        }
+        return jsonify(response), 400
 
     # Defense 3.2: check if account is locked
     locked, remaining = is_account_locked(username)
     if locked:
         log_auth_attempt(username, client_ip, False, f"account locked ({remaining}s remaining)")
+        payload = _issue_new_captcha_payload()
         # generic error message to not leak account status
-        return jsonify({"success": False, "error": "Invalid credentials"}), 401
+        response = {
+            "success": False,
+            "error": "Invalid credentials",
+            **payload,
+        }
+        return jsonify(response), 401
 
     # Defense 3.1: apply progressive delay (exponential backoff per user)
     apply_progressive_delay(username)
@@ -95,6 +130,7 @@ def login():
                     session["username"] = username
                     session["logged_in"] = True
                     
+                    clear_challenge(session)
                     return jsonify({"success": True, "message": "login successful"})
             except (ValueError, AttributeError):
                 # invalid hash format
@@ -103,8 +139,14 @@ def login():
         # Failed - Defense 3.2: increment counter, Defense 3.3: log
         increment_failed_attempts(username)
         log_auth_attempt(username, client_ip, False, "invalid credentials")
+        payload = _issue_new_captcha_payload()
         # generic error message (don't reveal if user exists)
-        return jsonify({"success": False, "error": "Invalid credentials"}), 401
+        response = {
+            "success": False,
+            "error": "Invalid credentials",
+            **payload,
+        }
+        return jsonify(response), 401
     finally:
         conn.close()
 
@@ -134,6 +176,6 @@ if __name__ == "__main__":
     # secured with defense mechanisms
     print("Starting secure server with defense mechanisms:")
     print("  - 3.1: Linear Delay (1.0s per attempt)")
-    print("  - 3.2: Counter-Limit (5 attempts → 5min lockout)")
+    print("  - 3.2: Counter-Limit (5 attempts → 5min lockout) + Captcha challenge")
     print("  - 3.3: Logging (database + file)")
     app.run(debug=True, host="127.0.0.1", port=5001)
