@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Login</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   </head>
   <body>
     <h1>Login</h1>
@@ -16,6 +17,8 @@
         Password: <input type="password" name="password" />
       </label>
       <br />
+      <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+      <br />
       <button type="submit">Login</button>
     </form>
 
@@ -24,7 +27,22 @@
       document.getElementById('loginForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const form = e.target;
-        const payload = { username: form.username.value, password: form.password.value };
+        if (!window.grecaptcha) {
+          alert('reCAPTCHA is not ready. Please try again.');
+          return;
+        }
+
+        const captchaToken = grecaptcha.getResponse();
+        if (!captchaToken) {
+          alert('Please complete the reCAPTCHA challenge.');
+          return;
+        }
+
+        const payload = {
+          username: form.username.value,
+          password: form.password.value,
+          'g-recaptcha-response': captchaToken,
+        };
 
         const res = await fetch('/login', {
           method: 'POST',
@@ -33,6 +51,8 @@
         });
         const json = await res.json();
         alert(JSON.stringify(json));
+
+        grecaptcha.reset();
       });
     </script>
   </body>

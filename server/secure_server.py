@@ -3,7 +3,6 @@ import sqlite3
 from pathlib import Path
 import secrets
 import sys
-import os
 import bcrypt
 from datetime import timedelta
 
@@ -14,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from defense.delay import apply_progressive_delay
 from defense.counter import is_account_locked, increment_failed_attempts, reset_failed_attempts
 from defense.logging import log_auth_attempt
+from defense.recaptcha import get_site_key, verify_response as verify_recaptcha
 
 app = Flask(__name__, template_folder="templates")
 
@@ -43,7 +43,10 @@ def get_db_connection():
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("login.html")
+    return render_template(
+        "login.html",
+        recaptcha_site_key=get_site_key(),
+    )
 
 
 @app.route("/login", methods=["POST"])
@@ -58,17 +61,38 @@ def login():
 
     username = data.get("username")
     password = data.get("password")
+    captcha_response = (
+        data.get("g-recaptcha-response")
+        or data.get("recaptcha_response")
+        or data.get("captcha_response")
+    )
+
+    if not verify_recaptcha(captcha_response, client_ip):
+        log_auth_attempt(username or "unknown", client_ip, False, "captcha failed")
+        response = {
+            "success": False,
+            "error": "Captcha validation failed",
+        }
+        return jsonify(response), 400
 
     if not username or not password:
         log_auth_attempt(username or "unknown", client_ip, False, "missing credentials")
-        return jsonify({"success": False, "error": "Invalid credentials"}), 400
+        response = {
+            "success": False,
+            "error": "Invalid credentials",
+        }
+        return jsonify(response), 400
 
     # Defense 3.2: check if account is locked
     locked, remaining = is_account_locked(username)
     if locked:
         log_auth_attempt(username, client_ip, False, f"account locked ({remaining}s remaining)")
         # generic error message to not leak account status
-        return jsonify({"success": False, "error": "Invalid credentials"}), 401
+        response = {
+            "success": False,
+            "error": "Invalid credentials",
+        }
+        return jsonify(response), 401
 
     # Defense 3.1: apply progressive delay (exponential backoff per user)
     apply_progressive_delay(username)
@@ -104,7 +128,11 @@ def login():
         increment_failed_attempts(username)
         log_auth_attempt(username, client_ip, False, "invalid credentials")
         # generic error message (don't reveal if user exists)
-        return jsonify({"success": False, "error": "Invalid credentials"}), 401
+        response = {
+            "success": False,
+            "error": "Invalid credentials",
+        }
+        return jsonify(response), 401
     finally:
         conn.close()
 
@@ -134,6 +162,6 @@ if __name__ == "__main__":
     # secured with defense mechanisms
     print("Starting secure server with defense mechanisms:")
     print("  - 3.1: Linear Delay (1.0s per attempt)")
-    print("  - 3.2: Counter-Limit (5 attempts → 5min lockout)")
+    print("  - 3.2: Counter-Limit (5 attempts → 5min lockout) + Google reCAPTCHA challenge")
     print("  - 3.3: Logging (database + file)")
     app.run(debug=True, host="127.0.0.1", port=5001)
