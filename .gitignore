@@ -8,3 +8,6 @@ venv/
 .env
 *.log
 /.vscode/
+
+# Ignore session keys (security)
+.session_key
