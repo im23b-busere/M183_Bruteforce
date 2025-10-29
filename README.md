@@ -32,12 +32,14 @@ server/
 README.md                  # Diese Dokumentation
 
 Angriffsszenarien (Bruteforce)
+
 Gemäss Bewertungsraster :
 Einfach: Verwendung eines einzigen Alphabets (Mono-Attacke). Optionale Erweiterung um Gross-/Kleinschreibung, Zahlen, Sonderzeichen.
 Mittel: Nutzung mehrerer Alphabete (Poly-Attacke), inkl. internationalisierter Zeichensätze (Türkisch, Ungarisch, Finnisch, Kyrillisch, Chinesisch, Römisch).
 Dictionary: Smart-Vorgehen basierend auf bekannten Benutzerdaten: Permutationen von Namen, Geburtstag und E-Mail-Adressen.
 Komplex: Optimierung der Ressourcen durch Parallelisierung oder Rainbow-Tables, verteilte Angriffe auf vorbereitete Hashes.
 Angriffe sind in separaten Files und können parametriert werden (z.B. Ziel-URL, Username, Passwortliste).
+
 Verteidigungskonzepte (Gegenmassnahmen)
 Einfache Verteidigungen:
 Lineare Latenzzeit (Delay nach jedem Versuch, z.B. 0,5–2s)
@@ -48,6 +50,7 @@ User-Interaktion: z.B. reCAPTCHA, um Bots abzuwehren
 Komplexe Verteidigung:
 Logging aller Fehlversuche und Erkennung von Angriffsmustern mit optionaler Alarmierung
 Alle Verteidigungen sind in separaten Files modular und parametrierbar integriert
+
 Datenbank
 Das Projekt verwendet eine SQLite-Datenbank. Das definierte Schema enthält:
 User-Accounts mit Tracking für fehlgeschlagene Versuche und Lockout
@@ -57,12 +60,14 @@ Saubere Coding-Standards: Fileheader, Kurzbeschreibung, Aufrufparameter, Autor, 
 Versionierung: Vorgegebene Git-Strategie für Teamarbeit und Ausfallsicherheit.
 Fehlerhandling: Scripts liefern klare Hinweise bei inkorrektem Aufruf.
 Vorbereitung: Fragen zum Code und den Mechanismen können in Fachgesprächen sachgerecht beantwortet werden.
+
 Deployment & Nutzung
 Datenbank mit create_db.py initialisieren (Modus: vulnerable/secure/both).
 Unsicheren oder sicheren Server starten (je nach Testziel).
 Angriffs-Scripts mit den entsprechenden Parametern auf die Server-Endpoint(s) ausführen.
 Defense-Einstellungen können per defense_wrapper.py angepasst werden.
 Auswertungen erfolgen über das Authentifizierungs-Log und nach Testszenarien gemäss dem Bewertungsraster.
+
 Autoren
 Erik Buser (Angriffsscripts & Server)
 Cadima Lusiola, Raiyan Mahfuz (Defense und Datenbank)
