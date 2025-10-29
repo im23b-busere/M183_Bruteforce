@@ -66,12 +66,12 @@ def main(argv=None):
         # Prepare demo users
         now = int(time.time())
         demo_users = [
-            ("alice", "a2"),
-            ("bob", "123"),
+            ("alice", "a2", "alice@example.com"),
+            ("bob", "123", "erbu08@gmail.com"),
         ]
 
         cur = conn.cursor()
-        for username, plain in demo_users:
+        for username, plain, email in demo_users:
             pw_plain = None
             pw_hash = None
             if mode == "vulnerable":
@@ -87,7 +87,7 @@ def main(argv=None):
             # Insert by username 
             cur.execute(
                 "INSERT OR IGNORE INTO users (username, password_plain, password_hash, email, failed_attempts, locked_until, created_at) VALUES (?, ?, ?, ?, 0, 0, ?)",
-                (username, pw_plain, pw_hash, None, now),
+                (username, pw_plain, pw_hash, email, now),
             )
 
         conn.commit()

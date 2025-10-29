@@ -78,27 +78,27 @@ def login():
     password = data.get("password")
     recaptcha_response = data.get("g-recaptcha-response")
 
-    # Defense 3.2: Verify reCAPTCHA challenge
-    captcha_valid, captcha_error = verify_recaptcha(recaptcha_response, client_ip)
-    if not captcha_valid:
-        log_auth_attempt(username or "unknown", client_ip, False, f"CAPTCHA failed: {captcha_error}")
-        return jsonify({"success": False, "error": captcha_error or "reCAPTCHA verification failed"}), 400
-
     if not username or not password:
         log_auth_attempt(username or "unknown", client_ip, False, "Missing credentials")
         return jsonify({"success": False, "error": "Invalid credentials"}), 400
 
-    # Defense 3.2: Check if account is locked
+    # Defense 3.2: Check if account is locked (before any other checks)
     locked, remaining = is_account_locked(username)
     if locked:
         log_auth_attempt(username, client_ip, False, f"Account locked ({remaining}s remaining)")
         return jsonify({"success": False, "error": f"Account locked. Try again in {remaining} seconds"}), 403
 
-    # Defense 3.1: apply delay based on configuration
+    # Defense 3.1: Apply delay EARLY to slow down all attempts (even CAPTCHA fails)
     if DEFENSE_MODE == "linear":
         apply_linear_delay()
     else:
         apply_progressive_delay(username)
+
+    # Defense 3.2: Verify reCAPTCHA challenge (after delay)
+    captcha_valid, captcha_error = verify_recaptcha(recaptcha_response, client_ip)
+    if not captcha_valid:
+        log_auth_attempt(username or "unknown", client_ip, False, f"CAPTCHA failed: {captcha_error}")
+        return jsonify({"success": False, "error": captcha_error or "reCAPTCHA verification failed"}), 400
 
     conn = get_db_connection()
     try:
