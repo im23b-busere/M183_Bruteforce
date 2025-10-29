@@ -66,8 +66,8 @@ def main(argv=None):
         # Prepare demo users
         now = int(time.time())
         demo_users = [
-            ("alice", "abc123"),
-            ("bob", "12345"),
+            ("alice", "a2"),
+            ("bob", "123"),
         ]
 
         cur = conn.cursor()
