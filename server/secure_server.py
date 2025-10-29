@@ -32,8 +32,12 @@ from defense.captcha import verify_recaptcha
 
 app = Flask(__name__, template_folder="templates")
 
-# Configuration: Choose defense mode
+# Configuration: Defense mechanisms (can be toggled via environment variables)
 DEFENSE_MODE = os.environ.get("DEFENSE_MODE", "progressive")  # "linear" or "progressive"
+ENABLE_DELAY = os.environ.get("ENABLE_DELAY", "true").lower() == "true"
+ENABLE_COUNTER = os.environ.get("ENABLE_COUNTER", "true").lower() == "true"
+ENABLE_CAPTCHA = os.environ.get("ENABLE_CAPTCHA", "true").lower() == "true"
+ENABLE_LOGGING = os.environ.get("ENABLE_LOGGING", "true").lower() == "true"
 
 # secure session configuration
 SESSION_KEY_FILE = Path(__file__).resolve().parent / ".session_key"
@@ -79,26 +83,32 @@ def login():
     recaptcha_response = data.get("g-recaptcha-response")
 
     if not username or not password:
-        log_auth_attempt(username or "unknown", client_ip, False, "Missing credentials")
+        if ENABLE_LOGGING:
+            log_auth_attempt(username or "unknown", client_ip, False, "Missing credentials")
         return jsonify({"success": False, "error": "Invalid credentials"}), 400
 
     # Defense 3.2: Check if account is locked (before any other checks)
-    locked, remaining = is_account_locked(username)
-    if locked:
-        log_auth_attempt(username, client_ip, False, f"Account locked ({remaining}s remaining)")
-        return jsonify({"success": False, "error": f"Account locked. Try again in {remaining} seconds"}), 403
+    if ENABLE_COUNTER:
+        locked, remaining = is_account_locked(username)
+        if locked:
+            if ENABLE_LOGGING:
+                log_auth_attempt(username, client_ip, False, f"Account locked ({remaining}s remaining)")
+            return jsonify({"success": False, "error": f"Account locked. Try again in {remaining} seconds"}), 403
 
     # Defense 3.1: Apply delay EARLY to slow down all attempts (even CAPTCHA fails)
-    if DEFENSE_MODE == "linear":
-        apply_linear_delay()
-    else:
-        apply_progressive_delay(username)
+    if ENABLE_DELAY:
+        if DEFENSE_MODE == "linear":
+            apply_linear_delay()
+        else:
+            apply_progressive_delay(username)
 
     # Defense 3.2: Verify reCAPTCHA challenge (after delay)
-    captcha_valid, captcha_error = verify_recaptcha(recaptcha_response, client_ip)
-    if not captcha_valid:
-        log_auth_attempt(username or "unknown", client_ip, False, f"CAPTCHA failed: {captcha_error}")
-        return jsonify({"success": False, "error": captcha_error or "reCAPTCHA verification failed"}), 400
+    if ENABLE_CAPTCHA:
+        captcha_valid, captcha_error = verify_recaptcha(recaptcha_response, client_ip)
+        if not captcha_valid:
+            if ENABLE_LOGGING:
+                log_auth_attempt(username or "unknown", client_ip, False, f"CAPTCHA failed: {captcha_error}")
+            return jsonify({"success": False, "error": captcha_error or "reCAPTCHA verification failed"}), 400
 
     conn = get_db_connection()
     try:
@@ -110,8 +120,10 @@ def login():
                 hash_bytes = row["password_hash"].encode('utf-8') if isinstance(row["password_hash"], str) else row["password_hash"]
                 if bcrypt.checkpw(password_bytes, hash_bytes):
                     # Successful login
-                    reset_failed_attempts(username)
-                    log_auth_attempt(username, client_ip, True, "Login successful")
+                    if ENABLE_COUNTER:
+                        reset_failed_attempts(username)
+                    if ENABLE_LOGGING:
+                        log_auth_attempt(username, client_ip, True, "Login successful")
                     
                     session.permanent = True
                     session["username"] = username
@@ -121,8 +133,10 @@ def login():
                 pass
         
         # Failed login
-        increment_failed_attempts(username)
-        log_auth_attempt(username, client_ip, False, "Invalid credentials")
+        if ENABLE_COUNTER:
+            increment_failed_attempts(username)
+        if ENABLE_LOGGING:
+            log_auth_attempt(username, client_ip, False, "Invalid credentials")
         return jsonify({"success": False, "error": "Invalid credentials"}), 401
     finally:
         conn.close()
@@ -152,16 +166,21 @@ def profile():
 if __name__ == "__main__":
     # secured with defense mechanisms
     print("=" * 70)
-    print("SECURE SERVER - Defense Mechanisms Active")
+    print("SECURE SERVER - Defense Mechanisms Configuration")
     print("=" * 70)
-    delay_mode = "Linear (1s fixed)" if DEFENSE_MODE == "linear" else "Progressive (exponential backoff)"
-    print(f"  [3.1] Delay Mode: {delay_mode}")
-    print(f"  [3.2] Counter-Limit: 5 failed attempts → 5min account lockout")
-    print(f"  [3.2] reCAPTCHA: User interaction challenge required")
-    print(f"  [3.3] Logging: All auth attempts logged to DB + file")
+    print(f"  [3.1] Delay: {'ENABLED' if ENABLE_DELAY else 'DISABLED'} (Mode: {DEFENSE_MODE})")
+    print(f"  [3.2] Counter-Limit: {'ENABLED' if ENABLE_COUNTER else 'DISABLED'} (5 attempts → 5min lockout)")
+    print(f"  [3.2] reCAPTCHA: {'ENABLED' if ENABLE_CAPTCHA else 'DISABLED'}")
+    print(f"  [3.3] Logging: {'ENABLED' if ENABLE_LOGGING else 'DISABLED'}")
     print("=" * 70)
     print(f"Server starting on http://127.0.0.1:5001")
-    print(f"To change delay mode, set DEFENSE_MODE=linear or DEFENSE_MODE=progressive")
+    print()
+    print("To customize defenses, set environment variables:")
+    print("  ENABLE_DELAY=false    - Disable delay mechanism")
+    print("  ENABLE_COUNTER=false  - Disable counter/lockout")
+    print("  ENABLE_CAPTCHA=false  - Disable CAPTCHA verification")
+    print("  ENABLE_LOGGING=false  - Disable authentication logging")
+    print("  DEFENSE_MODE=linear   - Use linear delay instead of progressive")
     print("=" * 70)
     print()
     app.run(debug=True, host="127.0.0.1", port=5001)
