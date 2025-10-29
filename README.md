@@ -1,73 +1,151 @@
-# M183_Bruteforce Team 5
-Überblick
-Dieses Projekt demonstriert verschiedene Bruteforce-Angriffe und Verteidigungsmechanismen auf Authentifizierungssysteme innerhalb eines sicheren Testumfelds. Ziel ist es, die typischen Formen von Bruteforce-Attacken praxisnah zu implementieren, Schwachstellen aufzuzeigen und effektive Gegenmassnahmen zu testen.
-Das Projekt ist modular aufgebaut und umfasst folgende Hauptbereiche:
-•	Angriffe: Mono-, Poly-, Dictionary-, Parallel-, Rainbow-Attacken
-•	Verteidigung: Delay-Mechanismen, Counter/Lockout, Captcha, Logging
-•	Server-Implementierung: Vulnerable und Secure Server
-•	Datenbank und Schema
-Projektstruktur
-text
+
+# M183 BruteForce Project
+
+## Overview
+This project demonstrates and analyzes brute-force attacks and modern defense mechanisms on authentication systems in a secure test environment. It is designed for educational purposes, showing both typical attack vectors and effective countermeasures.
+
+**Key Features:**
+- Modular attack and defense scripts
+- Realistic vulnerable and secure server implementations
+- SQLite database with user/account tracking and logging
+- Professional code structure, documentation, and best practices
+
+---
+
+## Project Structure
+
+```
 attack/
-  mono_attack.py           # Einfacher Bruteforce: Ein Alphabet
-  poly_attack.py           # Erweiterter Bruteforce: Mehrere Alphabete
-  dictionary_attack.py     # Dictionary-based Attack mit Mutationen
-  parallel_attack.py       # Parallelisierte Attacke mit Multiprocessing
-  rainbow_attack.py        # Rainbow-Table Angriff
-  parallel_rainbow_attack.py  # Parallelisierte Rainbow-Table Attacke
+  mono_attack.py         # Simple brute-force (single alphabet)
+  poly_attack.py         # Multi-alphabet brute-force (incl. international chars)
+  dictionary_attack.py   # Dictionary attack with smart mutations
+  parallel_attack.py     # Parallel brute-force (multiprocessing)
+  rainbow_attack.py      # Rainbow table attack (lookup file)
+  rainbow_table.json     # Precomputed rainbow table (SHA-1)
 db/
-  schema.sql               # Datenbank-Definitionen und Logging
-  wordlists/               # Passwortlisten für Dictionary-Attacken
+  schema.sql             # Database schema (users, logging)
+  users.sqlite           # SQLite database (auto-generated)
+  wordlists/
+    common-passwords.txt # Wordlist for dictionary attacks
 defense/
-  delay.py                 # Lineare & progressive Verzögerungen
-  counter.py               # Login-Versuchsbegrenzung und Lockout
-  captcha.py               # reCAPTCHA-Integration
-  logging.py               # Authentifizierungsversuch Logging
-  defense_wrapper.py       # Konfigurierbare Defense-Presets
+  delay.py               # Linear/progressive delay mechanisms
+  counter.py             # Account lockout after failed attempts
+  captcha.py             # reCAPTCHA v2 integration
+  logging.py             # Authentication attempt logging
 server/
-  vulnerable_server.py     # Unsicherer Demo-Server
-  secure_server.py         # Sicherer Server mit allen Verteidigungen
-  create_db.py             # Datenbank-Initialisierung
+  vulnerable_server.py   # Insecure demo server (no defenses)
+  secure_server.py       # Secure server (all defenses active)
+  create_db.py           # Database initialization
+README.md                # Project documentation (this file)
+```
 
-README.md                  # Diese Dokumentation
+---
 
-Angriffsszenarien (Bruteforce)
+## Attack Implementations
 
-Gemäss Bewertungsraster :
-Einfach: Verwendung eines einzigen Alphabets (Mono-Attacke). Optionale Erweiterung um Gross-/Kleinschreibung, Zahlen, Sonderzeichen.
-Mittel: Nutzung mehrerer Alphabete (Poly-Attacke), inkl. internationalisierter Zeichensätze (Türkisch, Ungarisch, Finnisch, Kyrillisch, Chinesisch, Römisch).
-Dictionary: Smart-Vorgehen basierend auf bekannten Benutzerdaten: Permutationen von Namen, Geburtstag und E-Mail-Adressen.
-Komplex: Optimierung der Ressourcen durch Parallelisierung oder Rainbow-Tables, verteilte Angriffe auf vorbereitete Hashes.
-Angriffe sind in separaten Files und können parametriert werden (z.B. Ziel-URL, Username, Passwortliste).
+| File                  | Attack Type         | Description |
+|-----------------------|--------------------|-------------|
+| mono_attack.py        | Mono brute-force   | Tries all passwords from a single alphabet (digits, lower, upper, symbols, or custom) |
+| poly_attack.py        | Poly brute-force   | Combines multiple alphabets, incl. Turkish, Hungarian, Cyrillic |
+| dictionary_attack.py  | Dictionary attack  | Uses a wordlist (with smart/user-specific entries) and applies common mutations |
+| parallel_attack.py    | Parallel brute-force | Splits keyspace across multiple processes (mono/poly/dict modes) |
+| rainbow_attack.py     | Rainbow table      | Looks up hashes in a precomputed SHA-1 rainbow table |
 
-Verteidigungskonzepte (Gegenmassnahmen)
-Einfache Verteidigungen:
-Lineare Latenzzeit (Delay nach jedem Versuch, z.B. 0,5–2s)
-Progressive Latenzzeit (Exponentiell wachsender Delay je nach Fehlversuchen)
-Mittlere Verteidigung:
-Counter-Limit: Spezifiziert maximale Fehlversuche, danach Sperrung für definierte Zeit
-User-Interaktion: z.B. reCAPTCHA, um Bots abzuwehren
-Komplexe Verteidigung:
-Logging aller Fehlversuche und Erkennung von Angriffsmustern mit optionaler Alarmierung
-Alle Verteidigungen sind in separaten Files modular und parametrierbar integriert
+**Note:** Each attack is implemented in a separate, clearly assigned file. No hybrid or redundant scripts.
 
-Datenbank
-Das Projekt verwendet eine SQLite-Datenbank. Das definierte Schema enthält:
-User-Accounts mit Tracking für fehlgeschlagene Versuche und Lockout
-Authentifizierungs-Log zur späteren Analyse und Angriffserkennung
-Best Practices (Malus-Vermeidung)
-Saubere Coding-Standards: Fileheader, Kurzbeschreibung, Aufrufparameter, Autor, Datum, Incode-Kommentare und nachvollziehbare Methodennamen sind in allen relevanten Scripts enthalten.
-Versionierung: Vorgegebene Git-Strategie für Teamarbeit und Ausfallsicherheit.
-Fehlerhandling: Scripts liefern klare Hinweise bei inkorrektem Aufruf.
-Vorbereitung: Fragen zum Code und den Mechanismen können in Fachgesprächen sachgerecht beantwortet werden.
+---
 
-Deployment & Nutzung
-Datenbank mit create_db.py initialisieren (Modus: vulnerable/secure/both).
-Unsicheren oder sicheren Server starten (je nach Testziel).
-Angriffs-Scripts mit den entsprechenden Parametern auf die Server-Endpoint(s) ausführen.
-Defense-Einstellungen können per defense_wrapper.py angepasst werden.
-Auswertungen erfolgen über das Authentifizierungs-Log und nach Testszenarien gemäss dem Bewertungsraster.
+## Defense Mechanisms
 
-Autoren
-Erik Buser (Angriffsscripts & Server)
-Cadima Lusiola, Raiyan Mahfuz (Defense und Datenbank)
+| File         | Defense Type         | Description |
+|--------------|---------------------|-------------|
+| delay.py     | Delay (3.1)         | Linear (fixed) and progressive (exponential) delays to slow brute-force |
+| counter.py   | Counter/Lockout (3.2) | Locks account after N failed attempts for a set duration |
+| captcha.py   | CAPTCHA (3.2)       | Integrates Google reCAPTCHA v2 to block bots |
+| logging.py   | Logging (3.3)       | Logs all authentication attempts to DB and file |
+
+All defenses are modular and can be enabled/disabled/configured as needed.
+
+---
+
+## Server Implementations
+
+- **vulnerable_server.py**: Minimal Flask server, no defenses, for attack demonstration.
+- **secure_server.py**: Flask server with all defense mechanisms active (delay, lockout, CAPTCHA, logging). Uses bcrypt password hashing with unique salt for each user (defense against rainbow tables).
+
+---
+
+## Database
+
+- SQLite database (`db/users.sqlite`) with schema defined in `db/schema.sql`
+- Tracks users, failed attempts, lockout state, and authentication logs
+- Wordlist (`db/wordlists/common-passwords.txt`) should include common and user-specific passwords
+
+---
+
+## Setup & Usage Instructions
+
+### 1. Install Requirements
+
+Install Python 3.8+ and required packages:
+
+```sh
+pip install flask bcrypt requests
+```
+
+### 2. Initialize the Database
+
+Create the database and demo users:
+
+```sh
+python server/create_db.py --mode secure
+# or for vulnerable mode:
+python server/create_db.py --mode vulnerable
+```
+
+### 3. Start the Server
+
+**Vulnerable server:**
+
+```sh
+python server/vulnerable_server.py
+# Runs on http://127.0.0.1:5000
+```
+
+**Secure server:**
+
+```sh
+python server/secure_server.py
+# Runs on http://127.0.0.1:5001
+```
+
+### 4. Run Attacks
+
+Each attack script can be run with `--help` for usage instructions. Example:
+
+```sh
+python attack/mono_attack.py --target http://127.0.0.1:5000/login --user alice --alphabet digits --max-len 3
+python attack/dictionary_attack.py --target http://127.0.0.1:5000/login --user bob --list db/wordlists/common-passwords.txt
+python attack/rainbow_attack.py --db db/users.sqlite --table attack/rainbow_table.json
+```
+
+### 5. Adjust Defenses
+
+Defense settings can be configured in the respective files in `defense/` or via environment variables (see file headers).
+
+---
+
+## Best Practices & Notes
+
+- All scripts include best-practice headers, docstrings, and error handling
+- No passwords or sensitive data are logged
+- Modular, testable, and extensible codebase
+- For grading: Each requirement is mapped to a single, clearly assigned file
+
+---
+
+## Authors
+
+- Erik Buser (Attacks, Server)
+- Cadima Lusiola (Defense, DB)
+- Raiyan Mahfuz (Defense, DB)
