@@ -1,4 +1,4 @@
-# M183_Bruteforce
+# M183_Bruteforce Team 5
 Überblick
 Dieses Projekt demonstriert verschiedene Bruteforce-Angriffe und Verteidigungsmechanismen auf Authentifizierungssysteme innerhalb eines sicheren Testumfelds. Ziel ist es, die typischen Formen von Bruteforce-Attacken praxisnah zu implementieren, Schwachstellen aufzuzeigen und effektive Gegenmassnahmen zu testen.
 Das Projekt ist modular aufgebaut und umfasst folgende Hauptbereiche:
